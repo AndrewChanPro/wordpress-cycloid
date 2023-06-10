@@ -1,0 +1,55 @@
+- name: Setup WordPress
+  hosts: localhost
+  gather_facts: False
+  vars:
+    db_host: terraform-20230607230550005000000001.ctn8dketjwnh.us-east-1.rds.amazonaws.com
+    db_name: wordpress_db
+    db_user: root
+    db_password: password
+  tasks:
+    - name: Update apt repository
+      command: cat /etc/os-release
+      register: test
+    - name: test
+      debug:
+        msg: "{{ test.stdout }}"
+    - name: Update apt repository
+      command: apt-get update
+    - name: Install dependencies
+      command: apt-get install -y apache2 php libapache2-mod-php php-mysql default-mysql-client
+    - name: Download WordPress
+      get_url:
+        url: https://wordpress.org/latest.tar.gz
+        dest: /var/www/html/latest.tar.gz
+        mode: '0755'
+    - name: Download wp-cli
+      get_url:
+        url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        dest: /usr/local/bin/wp
+        mode: '0755'
+    - name: Extract wordpress archive
+      command: tar -xvzf /var/www/html/latest.tar.gz -C /var/www/html/ --strip-components=1
+    - name : Clean up archive and default apache index file
+      command: rm /var/www/html/latest.tar.gz /var/www/html/index.html
+    - name: Change ownership of the Wordpress files to be owned by the www-data user
+      command: chown -R www-data:www-data /var/www/html
+    - name: Config db
+      copy:
+        dest: /var/www/html/wp-config.php
+        content: |
+          <?php
+          define( 'DB_NAME', getenv('WORDPRESS_DB_NAME') );
+          define( 'DB_USER', getenv('WORDPRESS_DB_USER') );
+          define( 'DB_PASSWORD', getenv('WORDPRESS_DB_PASSWORD') );
+          define( 'DB_HOST', getenv('WORDPRESS_DB_HOST') );
+          define( 'DB_CHARSET', 'utf8' );
+          define( 'DB_COLLATE', '' );
+          $table_prefix = 'wp_';
+
+          if ( ! defined( 'ABSPATH' ) ) {
+            define( 'ABSPATH', __DIR__ . '/' );
+          }
+
+          /** Sets up WordPress vars and included files. */
+          require_once ABSPATH . 'wp-settings.php';
+        mode: 0644

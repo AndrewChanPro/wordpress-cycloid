@@ -1,0 +1,62 @@
+{
+  "variables": {
+    "ansible_host": "default",
+    "ansible_connection": "docker",
+    "aws_account_id": "244332378314",
+    "region": "us-east-1",
+    "repository": "cycloid_wordpress",
+    "tag": "latest"
+   },
+  "builders": [
+    {
+      "type": "docker",
+      "image": "python:3",
+      "commit": true,
+      "run_command": [
+        "-d",
+        "-i",
+        "-t",
+        "--name",
+        "{{user `ansible_host`}}",
+        "{{.Image}}",
+        "/bin/bash"
+      ],
+      "changes": [
+        "CMD [\"/usr/sbin/apache2ctl\", \"-D\", \"FOREGROUND\"]"
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "ansible",
+      "playbook_file": "./playbook.yml",
+      "extra_arguments": [
+        "--extra-vars",
+        "ansible_host={{user `ansible_host`}} ansible_connection={{user `ansible_connection`}}"
+      ]
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "type": "shell-local",
+        "inline": [
+          "cd terraform",
+          "terraform init",
+          "terraform apply -auto-approve -target=aws_ecr_repository.repository"
+        ]
+      },
+      {
+        "type": "docker-tag",
+        "repository": "{{user `aws_account_id`}}.dkr.ecr.{{user `region`}}.amazonaws.com/{{ user `repository` }}",
+        "tag": "{{ user `tag` }}",
+        "only": ["docker"]
+      },
+      {
+        "type": "docker-push",
+        "ecr_login": true,
+        "login_server": "{{user `aws_account_id`}}.dkr.ecr.{{user `region`}}.amazonaws.com/"
+      }
+    ]
+  ]
+}

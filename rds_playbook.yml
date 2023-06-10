@@ -1,0 +1,15 @@
+- hosts: localhost
+  gather_facts: False
+  tasks:
+    - name: Create '_wp' table
+      community.mysql.mysql_query:
+        login_host: RDS_endpoint
+        login_user: username
+        login_password: password
+        db: database_name
+        query: |
+          CREATE TABLE `_wp` (
+            `id` int NOT NULL AUTO_INCREMENT,
+            `column_name` varchar(255) NOT NULL,
+            PRIMARY KEY (`id`)
+          );
