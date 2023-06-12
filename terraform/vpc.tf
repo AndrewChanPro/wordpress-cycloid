@@ -41,6 +41,11 @@ resource "aws_route_table" "public_rt" {
 
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_gw.id
+  }
 }
 
 resource "aws_route_table_association" "rta1" {
@@ -61,4 +66,13 @@ resource "aws_route_table_association" "private-rta1" {
 resource "aws_route_table_association" "private-rta2" {
   subnet_id      = aws_subnet.private-subnet-2.id
   route_table_id = aws_route_table.private_rt.id
+}
+
+resource "aws_eip" "eip_nat" {
+  domain = "vpc"
+}
+
+resource "aws_nat_gateway" "nat_gw" {
+  allocation_id = aws_eip.eip_nat.id
+  subnet_id     = aws_subnet.public-subnet-1.id
 }
